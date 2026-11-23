@@ -1,6 +1,6 @@
 # orderlab -- PY_V312_SETUPTOOLS_PIP_MICRO
 #dummy pr 03-11
-#dummy
+#dummy pr
 #pr
 #dummy
 Order-pricing domain used as a white-box tool-evaluation fixture. One branch of
@@ -263,3 +263,4 @@ the tools that are supposed to be dark**.
 <!-- dummy PR 2026-11-16 09:16:04 -->
 <!-- dummy PR 2026-11-17 07:51:45 -->
 <!-- dummy PR 2026-11-17 07:51:45 -->
+
