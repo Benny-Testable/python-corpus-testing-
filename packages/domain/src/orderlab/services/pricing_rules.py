@@ -66,3 +66,13 @@ class PricingRules(object):
         if amount >= self.BIG_ORDER_THRESHOLD:
             points += self.BIG_ORDER_BONUS
         return points
+
+    def loyalty_tier(self, points: int) -> str:
+        """Badge for a points balance (second commit: Coverage Delta baseline step)."""
+        if points >= 1000:
+            return "platinum"
+        if points >= 500:
+            return "gold"
+        if points >= 100:
+            return "silver"
+        return "member"
