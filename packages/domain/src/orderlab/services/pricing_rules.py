@@ -48,3 +48,21 @@ class PricingRules(object):
         if promo:
             parts.append("promo={0:.2%}".format(promo))
         return " + ".join(parts)
+
+    # Loyalty points: every literal below is pinned by an exact-value test in
+    # tests/test_loyalty_points.py, so constant-replacement mutants are killed
+    # (Mutation Testing / Regression Testing Validation).
+    POINTS_PER_UNIT_SPEND = 10
+    MEMBER_MULTIPLIER = 2
+    BIG_ORDER_THRESHOLD = 5000
+    BIG_ORDER_BONUS = 100
+
+    def loyalty_points(self, amount: int, member: bool = False) -> int:
+        if amount < 0:
+            raise ValueError("amount must be non-negative")
+        points = amount // self.POINTS_PER_UNIT_SPEND
+        if member:
+            points *= self.MEMBER_MULTIPLIER
+        if amount >= self.BIG_ORDER_THRESHOLD:
+            points += self.BIG_ORDER_BONUS
+        return points

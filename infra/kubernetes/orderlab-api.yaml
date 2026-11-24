@@ -1,0 +1,74 @@
+# OrderLab test data for IaC scanners (checkov, trivy, KICS). NOT FOR DEPLOYMENT:
+# every object below carries a deliberate misconfiguration, listed in
+# infra/README.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orderlab-api
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orderlab-api
+  template:
+    metadata:
+      labels:
+        app: orderlab-api
+    spec:
+      hostNetwork: true
+      hostPID: true
+      automountServiceAccountToken: true
+      containers:
+        - name: api
+          image: orderlab/api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            capabilities:
+              add: ["SYS_ADMIN", "NET_ADMIN"]
+---
+# Publicly exposed: a LoadBalancer service open to any source address.
+apiVersion: v1
+kind: Service
+metadata:
+  name: orderlab-api
+  namespace: default
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 0.0.0.0/0
+  selector:
+    app: orderlab-api
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+# Privileged access: the namespace's default service account bound to cluster-admin.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: orderlab-default-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+---
+# Privileged access: a role that grants every verb on every resource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: orderlab-wildcard
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]

@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  OrderLab test data for IaC scanners (checkov, trivy, KICS). NOT FOR DEPLOYMENT:
+  every resource below carries a deliberate misconfiguration, listed in
+  infra/README.md.
+
+Parameters:
+  DbPassword:
+    Type: String
+    NoEcho: true
+    Description: Supplied at deploy time; never stored in this template.
+
+Resources:
+  # Public storage access + unencrypted storage: public-read ACL, no
+  # PublicAccessBlock, no default encryption, no versioning, no access logging.
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: orderlab-reports-public
+      AccessControl: PublicRead
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # Open firewall rules: SSH and RDP open to the whole internet, all egress.
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: OrderLab app tier
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+  # Publicly exposed, unencrypted database with no backups or deletion protection.
+  OrdersDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: "20"
+      MasterUsername: orderlab
+      MasterUserPassword: !Ref DbPassword
+      PubliclyAccessible: true
+      StorageEncrypted: false
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+      VPCSecurityGroups:
+        - !GetAtt AppSecurityGroup.GroupId
+
+  # Unencrypted block storage.
+  ScratchVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Size: 50
+      Encrypted: false
+
+  # Privileged access: a managed policy granting every action on every resource.
+  AdminEverythingPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Full administrative access for the OrderLab deploy role
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref AdminEverythingPolicy
